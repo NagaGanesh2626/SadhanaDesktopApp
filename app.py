@@ -98,7 +98,7 @@ submit.setStyleSheet("""
         qproperty-alignment: 'AlignCenter';
     }
     QPushButton:hover {
-        background-color: rgba(255,0,0,0.2);
+        background-color: rgba(0,255,0,0.2);
     }
 """)
 imagelabel = QLabel()
@@ -124,7 +124,7 @@ forRegisterButton.setStyleSheet("""
         qproperty-alignment: 'AlignCenter';
     }
     QPushButton:hover {
-        background-color: rgba(255,0,0,0.2);
+        background-color: rgba(0,255,0,0.2);
     }
 """)
 # Page2
@@ -192,7 +192,7 @@ registerPass = QLineEdit()
 registerPass.setStyleSheet("""
     QLineEdit {
         background-color: rgba(255,255,255,50);
-        qproperty-alignment: 'AlignCenter'; /* Center text horizontally and vertically */
+        qproperty-alignment: 'AlignCenter'; 
         color: white;
         font-family: Arial;
         font-size: 12px;
@@ -213,7 +213,7 @@ registerSubmit.setStyleSheet("""
         qproperty-alignment: 'AlignCenter';
     }
     QPushButton:hover {
-        background-color: rgba(255,0,0,0.1);
+        background-color: rgba(0,255,0,0.2);
     }
 """)
 
