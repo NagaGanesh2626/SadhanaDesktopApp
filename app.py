@@ -1,5 +1,8 @@
+import hashlib
 import os.path
 import sys
+
+import bcrypt
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QFormLayout
 from PyQt5.QtGui import QPalette, QBrush, QLinearGradient, QPixmap, QTransform
 from PyQt5.QtCore import Qt, QTimer
@@ -9,6 +12,7 @@ from pymongo import MongoClient
 def changes():
     """
     0) Make the entire code in a simple and understandable way by making it in OOPS format! (Done!)
+    0.1) Hide the Important folders and files that are not required to open source.
     1) Complete the hashing of the passwords
     2) Work on the UI so that the peacock feather is oriented and positioned in the corned at 37degrees
     3) Complete the login sessions and logout sessions
@@ -25,6 +29,17 @@ db = connection['SadhanaChart']
 collection_1 = db['Users']
 SESSION_FILE = 'session.txt'
 
+def hashPasswords(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+def temporaryWarnings(name, Text, time):
+    temp = name.text()
+    temp_style = name.StyleSheet()
+
+    name.setText(Text)
+    name.setStyleSheet("color: red;", "font-family: Arial;", "font-size: 16px;", "font-weight: bold;")
+
+    QTimer.singleshot(time, lambda: (name.setText(temp), name.setStyleSheet(temp_style)))
 
 class login_page(QWidget):
     def __init__(self):
@@ -39,8 +54,8 @@ class login_page(QWidget):
                 );
             }
         """)
-        label1 = QLabel('Enter your username here: ', self)
-        label1.setStyleSheet("""
+        self.label1 = QLabel('Enter your username here: ', self)
+        self.label1.setStyleSheet("""
             QLabel {
                 background: transparent;
                 qproperty-alignment: 'AlignCenter';
@@ -50,8 +65,8 @@ class login_page(QWidget):
                 color: black;
             }
         """)
-        name_ = QLineEdit(self)
-        name_.setStyleSheet("""
+        self.name_ = QLineEdit(self)
+        self.name_.setStyleSheet("""
             QLineEdit {
                 background-color: rgba(255,255,255,50);
                 qproperty-alignment: 'AlignCenter'; /* Center text horizontally and vertically */
@@ -62,9 +77,9 @@ class login_page(QWidget):
                 border-radius: 13px;
             }
         """)
-        password_ = QLineEdit(self)
-        password_.setEchoMode(QLineEdit.Password)
-        password_.setStyleSheet("""
+        self.password_ = QLineEdit(self)
+        self.password_.setEchoMode(QLineEdit.Password)
+        self.password_.setStyleSheet("""
             QLineEdit {
                 background-color: rgba(255,255,255,50);
                 qproperty-alignment: 'AlignCenter'; /* Center text horizontally and vertically */
@@ -118,15 +133,24 @@ class login_page(QWidget):
             }
         """)
         layout = QFormLayout()
-        layout.addRow(label1)
-        layout.addRow(name_)
-        layout.addRow(password_)
+        layout.addRow(self.label1)
+        layout.addRow(self.name_)
+        layout.addRow(self.password_)
         layout.addRow(submit)
         self.setLayout(layout)
+    def loginButton(self):
+        username = self.name_.text()
+        password = hashPasswords(self.password_.text())
 
-    def page1submit(self):
-        ...
-
+        user_find = collection_1.find_one({'Name': username, 'Password': password})
+        if user_find is not None:
+            with open(SESSION_FILE, 'w') as session_file:
+                session_file.write('Logged-In')
+            """
+            Code for opening the mainpage
+            """
+        else:
+            temporaryWarnings(self.label1, "Please Register to the Application", 5000)
 
 class main_page(QWidget):
     def __init__(self):
@@ -155,13 +179,6 @@ class main_page(QWidget):
         layout.addRow(ReturnButton)
         layout.addRow(logoutButton)
         self.setLayout(layout)
-
-    def forReturnButton(self):
-        ...
-
-    def forLogoutButton(self):
-        ...
-
 
 class RegisterPage(QWidget):
     def __init__(self):
@@ -234,20 +251,34 @@ class RegisterPage(QWidget):
         layout.addRow(registerSubmit)
         self.setLayout(layout)
 
+
+class Application(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.login_page = login_page()
+        self.main_page = main_page()
+
+        self.login_page.setParent(self)
+        self.main_page.setParent(self)
+
+        if os.path.exists(SESSION_FILE):
+            self.show_main_page()
+        else:
+            self.show_login_page()
+        self.login_page.show()
+    def show_login_page(self):
+        self.main_page.hide()
+        self.login_page.show()
+    def show_main_page(self):
+        self.login_page.hide()
+        self.main_page.show()
 # Main Function:
 def main():
     app = QApplication(sys.argv)
-    loginPage = login_page()
-    loginPage.show()
+    my_app = Application()
+    my_app.show()
 
-    mainpage = main_page()
-    # mainpage.show()
-
-    registerPage = RegisterPage()
-    # registerPage.show()
     sys.exit(app.exec_())
-
-
 if __name__ == '__main__':
     main()
 
