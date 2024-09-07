@@ -3,10 +3,12 @@ import os.path
 import sys
 
 import bcrypt
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QFormLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QFormLayout, \
+    QStackedWidget
 from PyQt5.QtGui import QPalette, QBrush, QLinearGradient, QPixmap, QTransform
 from PyQt5.QtCore import Qt, QTimer
 from pymongo import MongoClient
+
 
 #Changes required:
 def changes():
@@ -24,13 +26,20 @@ def changes():
     9) Make the entire project into a git repository and post it in github
     """
 
+
 connection = MongoClient('localhost', 27017)
 db = connection['SadhanaChart']
 collection_1 = db['Users']
 SESSION_FILE = 'session.txt'
 
+
 def hashPasswords(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+
+def checkPasswords(password, a_password):
+    return bcrypt.checkpw(password.encode('utf-8'), a_password.encode('utf-8'))
+
 
 def temporaryWarnings(name, Text, time):
     temp = name.text()
@@ -39,13 +48,21 @@ def temporaryWarnings(name, Text, time):
     name.setText(Text)
     name.setStyleSheet("color: red;", "font-family: Arial;", "font-size: 16px;", "font-weight: bold;")
 
-    QTimer.singleshot(time, lambda: (name.setText(temp), name.setStyleSheet(temp_style)))
+    QTimer.singleShot(time, lambda: (name.setText(temp), name.setStyleSheet(temp_style)))
+
 
 class login_page(QWidget):
-    def __init__(self):
+    def __init__(self, app):
         super().__init__()
+        self.app = app
         self.setWindowTitle("Sadhana App")
         self.setGeometry(300, 300, 500, 500)
+        self.label1 = QLabel('Welcome to Sadhana App! ', self)
+        self.name_ = QLineEdit(self)
+        self.name_.setPlaceholderText('Enter Username: ')
+        self.password_ = QLineEdit(self)
+        self.submit = QPushButton(self)
+        self.password_.setPlaceholderText("Enter Password")
         self.setStyleSheet("""
             QWidget {
                 background: qlineargradient(
@@ -54,7 +71,10 @@ class login_page(QWidget):
                 );
             }
         """)
-        self.label1 = QLabel('Enter your username here: ', self)
+        self.initUi()
+
+    def initUi(self):
+
         self.label1.setStyleSheet("""
             QLabel {
                 background: transparent;
@@ -65,7 +85,7 @@ class login_page(QWidget):
                 color: black;
             }
         """)
-        self.name_ = QLineEdit(self)
+
         self.name_.setStyleSheet("""
             QLineEdit {
                 background-color: rgba(255,255,255,50);
@@ -77,7 +97,7 @@ class login_page(QWidget):
                 border-radius: 13px;
             }
         """)
-        self.password_ = QLineEdit(self)
+
         self.password_.setEchoMode(QLineEdit.Password)
         self.password_.setStyleSheet("""
             QLineEdit {
@@ -90,8 +110,8 @@ class login_page(QWidget):
                 border-radius: 13px;
             }
         """)
-        submit = QPushButton("Submit", self)
-        submit.setStyleSheet("""
+
+        self.submit.setStyleSheet("""
             QPushButton {
                 background: transparent;
                 color: white;
@@ -106,16 +126,6 @@ class login_page(QWidget):
                 background-color: rgba(0,255,0,0.2);
             }
         """)
-        imagelabel = QLabel(self)
-        image1 = QPixmap("feaether.png")
-        imagelabel.setPixmap(image1)
-        transform = QTransform()
-        rotated_image = image1.transformed(transform, Qt.SmoothTransformation)
-        imagelabel.setPixmap(rotated_image)
-        imagelabel.setStyleSheet("background: transparent;")
-        scaled_image = image1.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        imagelabel.setPixmap(scaled_image)
-        imagelabel.resize(scaled_image.width(), scaled_image.height())
         forRegisterButton = QPushButton("Register Here")
         forRegisterButton.setStyleSheet("""
             QPushButton {
@@ -132,28 +142,34 @@ class login_page(QWidget):
                 background-color: rgba(0,255,0,0.2);
             }
         """)
-        layout = QFormLayout()
-        layout.addRow(self.label1)
-        layout.addRow(self.name_)
-        layout.addRow(self.password_)
-        layout.addRow(submit)
+        forRegisterButton.clicked.connect(self.show_register_page)
+        layout = QVBoxLayout()
+        layout.addWidget(self.label1)
+        layout.addWidget(self.name_)
+        layout.addWidget(self.password_)
+        layout.addWidget(forRegisterButton)
+        layout.addWidget(self.submit)
         self.setLayout(layout)
+
     def loginButton(self):
         username = self.name_.text()
-        password = hashPasswords(self.password_.text())
+        password = self.password_.text()
 
-        user_find = collection_1.find_one({'Name': username, 'Password': password})
-        if user_find is not None:
+        user_find = collection_1.find_one({'Name': username})
+        if user_find is not None and checkPasswords(user_find['Password'], password):
             with open(SESSION_FILE, 'w') as session_file:
                 session_file.write('Logged-In')
-            """
-            Code for opening the mainpage
-            """
+            self.submit.clicked.connect(self.show_main_page)
         else:
             temporaryWarnings(self.label1, "Please Register to the Application", 5000)
 
+    def show_main_page(self):
+        self.app.show_main_page()
+    def show_register_page(self):
+        self.app.show_register_page()
+
 class main_page(QWidget):
-    def __init__(self):
+    def __init__(self, app):
         super().__init__()
         self.setWindowTitle("Sadhana App")
         self.setGeometry(300, 300, 500, 500)
@@ -180,11 +196,20 @@ class main_page(QWidget):
         layout.addRow(logoutButton)
         self.setLayout(layout)
 
+    def logout(self):
+        if os.path.exists(SESSION_FILE):
+            os.remove(SESSION_FILE)
+        self.app.show_login_page()
+
+
 class RegisterPage(QWidget):
-    def __init__(self):
+    def __init__(self, app):
         super().__init__()
         self.setWindowTitle("Sadhana Register Page")
         self.setGeometry(300, 300, 500, 500)
+        self.initUi()
+
+    def initUi(self):
         self.setStyleSheet("""
                 QWidget {
                 background: qlineargradient(
@@ -255,23 +280,30 @@ class RegisterPage(QWidget):
 class Application(QWidget):
     def __init__(self):
         super().__init__()
-        self.login_page = login_page()
-        self.main_page = main_page()
+        self.setGeometry(300, 300, 500, 500)
+        self.stack = QStackedWidget(self)
 
-        self.login_page.setParent(self)
-        self.main_page.setParent(self)
+        self.login_page = login_page(self)
+        self.main_page = main_page(self)
+        self.register_page = RegisterPage(self)
 
+        self.stack.addWidget(self.login_page)
+        self.stack.addWidget(self.main_page)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.stack)
+        self.setLayout(layout)
         if os.path.exists(SESSION_FILE):
             self.show_main_page()
         else:
             self.show_login_page()
-        self.login_page.show()
+
     def show_login_page(self):
-        self.main_page.hide()
-        self.login_page.show()
+        self.stack.setCurrentWidget(self.login_page)
     def show_main_page(self):
-        self.login_page.hide()
-        self.main_page.show()
+        self.stack.setCurrentWidget(self.main_page)
+    def show_register_page(self):
+        self.stack.setCurrentWidget(self.register_page)
 # Main Function:
 def main():
     app = QApplication(sys.argv)
@@ -279,79 +311,7 @@ def main():
     my_app.show()
 
     sys.exit(app.exec_())
+
+
 if __name__ == '__main__':
     main()
-
-
-# Functions
-# def is_logged_in():
-#     return os.path.exists(SESSION_FILE)
-#
-# def set_logged_in():
-#     with open(SESSION_FILE, 'w') as f:
-#         f.write('logged_in')
-# def set_logged_out():
-#     if os.path.exists(SESSION_FILE):
-#         os.remove(SESSION_FILE)
-# # This temporary messages I have to change it in such a way that I can use it whenever I want for whatever variable
-# def temporarymessages(message, duration):
-#     text = label1.text()
-#     style = label1.styleSheet()
-#     label1.setText(message)
-#     label1.setStyleSheet("""
-#         QLabel {
-#             background: transparent;
-#             qproperty-alignment: 'AlignCenter';
-#             font-family: Arial;
-#             font-weight: bold;
-#             font-size: 20px;
-#             color: red;
-#         }
-#     """)
-#
-#     QTimer.singleShot(duration, lambda: (label1.setText(text), label1.setStyleSheet(style)))
-# def forRegisterButtonfun():
-#     page1.hide()
-#     page3.show()
-# forRegisterButton.clicked.connect(forRegisterButtonfun)
-# def onPushButton1():
-#     page2.hide()
-#     page1.show()
-# ReturnButton.clicked.connect(onPushButton1)
-# def regPushButton():
-#     res = collection_1.find_one({"Name": registerAcc.text()})
-#     if registerAcc.text() != "":
-#         if res is None:
-#             user = {
-#                 "Name": registerAcc.text(),
-#                 "Password": registerPass.text(),
-#             }
-#             result = collection_1.insert_one(user)
-#             page3.hide()
-#             page1.show()
-#             temporarymessages("Please enter the Registered Data here: ", 10000)
-#         else:
-#             registerLabel.setText("The username is Already Taken")
-#     else:
-#         registerLabel.setText("Enter a valid text!")
-# registerSubmit.clicked.connect(regPushButton)
-#
-# def forlogoutButton():
-#     set_logged_out()
-# def onPushButton():
-#     name = name_.text().title()
-#     password = password_.text()
-#     if name != "":
-#         result = collection_1.find_one({"Name": name, "Password": password})
-#         if result != None:
-#             set_logged_in()
-#             label2.setText(f" Hare Krishna! Welcome {name} to Sadhana App!")
-#             page1.hide()
-#             page2.show()
-#         else:
-#             temporarymessages("Please Register to the App!", 2000)
-#     else:
-#         temporarymessages("Please Enter a valid Text!", 2000)
-#
-# submit.clicked.connect(onPushButton)
-# name_.returnPressed.connect(onPushButton)
