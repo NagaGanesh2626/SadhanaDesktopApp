@@ -165,6 +165,7 @@ class login_page(QWidget):
 
     def show_main_page(self):
         self.app.show_main_page()
+
     def show_register_page(self):
         self.app.show_register_page()
 
